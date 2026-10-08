@@ -2,12 +2,16 @@
 
 Aplicativo web para controlar entradas, saídas e cartões de crédito mês a mês.
 
-É apenas frontend: não há servidor, login nem banco de dados. Cada perfil é um arquivo `.json`
-que você abre e salva no próprio dispositivo.
+Cada perfil é um arquivo `.json` que você abre e salva no próprio dispositivo. Opcionalmente, o
+perfil também pode ser guardado na nuvem, protegido por id e senha, por meio da API da pasta
+[api/](api/README.md).
 
 ## Funcionalidades
 
 - Criar um perfil novo ou abrir um perfil `.json` salvo anteriormente.
+- Abrir e salvar o perfil na nuvem com id de usuário e senha. Os dados são cifrados no navegador
+  antes do envio: o servidor não consegue lê-los e a senha nunca sai do dispositivo. Uma senha
+  esquecida não pode ser recuperada.
 - Registrar entradas e saídas na conta corrente ou em um cartão de crédito.
 - Recorrência única, limitada (N meses) ou ilimitada (mensal).
 - Editar ou excluir um registro recorrente só no mês atual, dali em diante ou em todos os meses.
@@ -17,8 +21,9 @@ que você abre e salva no próprio dispositivo.
 - Marcar registros como efetivados e comparar o saldo previsto com o já efetivado.
 - Navegar entre meses pelas setas ou arrastando a tela para os lados.
 
-As alterações ficam só na memória até você tocar em **Salvar**, que baixa o arquivo `.json`
-atualizado. Um ponto vermelho no botão indica alterações ainda não salvas.
+As alterações ficam só na memória até você tocar em **Salvar** e escolher entre baixar o arquivo
+`.json` atualizado ou salvar na nuvem. Um ponto vermelho no botão indica alterações ainda não
+salvas.
 
 ## Como rodar
 
@@ -28,6 +33,20 @@ Requer Node.js 22 ou superior e npm.
 npm install
 npm run dev
 ```
+
+### Nuvem (opcional)
+
+As opções de nuvem só aparecem quando a variável `VITE_API_URL` aponta para a API. Sem ela, o app
+trabalha apenas com arquivos.
+
+- Em desenvolvimento, `.env.development` já aponta para `http://localhost:8080`. Suba a API
+  seguindo o [README dela](api/README.md).
+- Em produção, crie `.env.production` com o endereço da API publicada antes de `npm run build`
+  ou `npm run deploy`:
+
+  ```sh
+  VITE_API_URL=https://endereco-da-sua-api
+  ```
 
 ## Scripts
 
@@ -57,8 +76,10 @@ src/
     ui/                     Componentes base (botão, campo, checkbox, rótulo)
   lib/
     finance.ts              Tipos e regras de negócio (recorrência, faturas, saldos)
+    cloud.ts                Cifragem do perfil e chamadas à API de nuvem
     utils.ts                Utilitário de classes CSS
   test/                     Testes e configuração do ambiente de teste
+api/                        API de nuvem (Express e MongoDB), projeto Node separado
 ```
 
 ## Tecnologias

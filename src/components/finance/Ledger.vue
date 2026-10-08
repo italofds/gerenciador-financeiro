@@ -1,12 +1,32 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Plus, X } from "@lucide/vue";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CloudUpload,
+  CreditCard,
+  Download,
+  Landmark,
+  Plus,
+  Save,
+  X,
+} from "@lucide/vue";
 import { toast } from "vue-sonner";
 import Button from "@/components/ui/Button.vue";
 import BottomSheet from "@/components/finance/BottomSheet.vue";
 import CardForm from "@/components/finance/CardForm.vue";
+import CloudForm from "@/components/finance/CloudForm.vue";
 import RecordForm, { type RecordInitial } from "@/components/finance/RecordForm.vue";
 import RowItem from "@/components/finance/RowItem.vue";
+import {
+  CloudError,
+  cloudEnabled,
+  cloudMessage,
+  createCloud,
+  openCloud,
+  saveCloud,
+  type CloudSession,
+} from "@/lib/cloud";
 import {
   addYm,
   computeMonth,
@@ -23,11 +43,17 @@ import {
   type Scope,
 } from "@/lib/finance";
 
-type SheetName = "record" | "card" | "cards";
+type SheetName = "record" | "card" | "cards" | "save" | "cloud";
 
-const props = defineProps<{ profile: Profile; dirty: boolean }>();
-const emit = defineEmits<{ update: [profile: Profile]; saved: []; close: [] }>();
+const props = defineProps<{ profile: Profile; session: CloudSession | null; dirty: boolean }>();
+const emit = defineEmits<{
+  update: [profile: Profile];
+  saved: [session?: CloudSession];
+  close: [];
+}>();
 
+const cloudOn = cloudEnabled();
+const busy = ref(false);
 const today = new Date();
 const ym = ref(ymOf(today));
 const anim = ref("");
@@ -63,6 +89,8 @@ const recordKey = computed(() =>
   editing.value ? `${editing.value.recordId}${editing.value.ym}` : `new${ym.value}`,
 );
 const sheetTitle = computed(() => {
+  if (view.value === "save") return "Salvar";
+  if (view.value === "cloud") return "Salvar na nuvem";
   if (view.value === "cards") return "Cartões de crédito";
   if (view.value === "card") return editCard.value ? "Editar cartão" : "Novo cartão";
   return editing.value ? "Editar registro" : "Novo registro";
@@ -84,7 +112,7 @@ const goToday = () => {
   ym.value = ymOf(today);
 };
 
-const save = () => {
+const download = () => {
   const blob = new Blob([JSON.stringify(props.profile, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -92,8 +120,60 @@ const save = () => {
   a.click();
   URL.revokeObjectURL(a.href);
   emit("saved");
+  sheet.value = null;
   toast.success("Arquivo salvo");
 };
+const save = () => {
+  if (cloudOn) sheet.value = "save";
+  else download();
+};
+
+const cloudSaved = (s: CloudSession) => {
+  emit("saved", s);
+  sheet.value = null;
+  toast.success("Salvo na nuvem");
+};
+const cloudTask = async (task: () => Promise<void>) => {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await task();
+  } catch (e) {
+    toast.error(cloudMessage(e));
+  } finally {
+    busy.value = false;
+  }
+};
+const saveToCloud = () => {
+  const s = props.session;
+  if (!s) {
+    sheet.value = "cloud";
+    return;
+  }
+  void cloudTask(async () => {
+    try {
+      cloudSaved(await saveCloud(s, props.profile));
+    } catch (e) {
+      if (!(e instanceof CloudError) || e.code !== "conflict" || e.rev === undefined) throw e;
+      if (confirm("A nuvem tem uma versão mais recente, salva em outro dispositivo. Sobrescrever?"))
+        cloudSaved(await saveCloud({ ...s, rev: e.rev }, props.profile));
+    }
+  });
+};
+const createInCloud = (id: string, password: string) =>
+  cloudTask(async () => {
+    try {
+      cloudSaved(await createCloud(id, password, props.profile));
+    } catch (taken) {
+      if (!(taken instanceof CloudError) || taken.code !== "taken") throw taken;
+      // the id exists: only offer to replace it if the password is the one of that account
+      const existing = await openCloud(id, password).catch((e: unknown) => {
+        throw e instanceof CloudError && e.code === "auth" ? taken : e;
+      });
+      if (confirm(`Já existe um perfil salvo em "${id}". Substituir pelo perfil atual?`))
+        cloudSaved(await saveCloud(existing.session, props.profile));
+    }
+  });
 
 const close = () => {
   if (!props.dirty || confirm("Há alterações não salvas. Fechar mesmo assim?")) emit("close");
@@ -103,7 +183,9 @@ const toggle = (key: string) =>
   update({ ...props.profile, done: { ...props.profile.done, [key]: !props.profile.done[key] } });
 
 const closeSheet = () => {
-  sheet.value = sheet.value === "card" ? "cards" : null;
+  if (sheet.value === "card") sheet.value = "cards";
+  else if (sheet.value === "cloud") sheet.value = "save";
+  else sheet.value = null;
 };
 const newRecord = () => {
   editing.value = null;
@@ -191,7 +273,7 @@ const onPointerUp = (e: PointerEvent) => {
             class="relative rounded-full bg-accent text-accent-foreground hover:bg-accent/90"
             @click="save"
           >
-            <Download class="h-4 w-4" /> Salvar
+            <Save class="h-4 w-4" /> Salvar
             <span
               v-if="dirty"
               class="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-destructive"
@@ -308,6 +390,40 @@ const onPointerUp = (e: PointerEvent) => {
         :initial="recordInitial"
         @save="saveRecord"
         @delete="removeRecord"
+      />
+      <div v-else-if="view === 'save'" class="space-y-2">
+        <button
+          class="flex w-full items-center gap-3 rounded-xl border border-border p-4 text-left"
+          @click="download"
+        >
+          <Download class="h-5 w-5 shrink-0 text-primary" />
+          <span class="min-w-0 flex-1">
+            <span class="block font-semibold">Baixar arquivo .json</span>
+            <span class="block text-sm text-muted-foreground">Guardar no seu dispositivo</span>
+          </span>
+        </button>
+        <button
+          class="flex w-full items-center gap-3 rounded-xl border border-border p-4 text-left disabled:opacity-50"
+          :disabled="busy"
+          @click="saveToCloud"
+        >
+          <CloudUpload class="h-5 w-5 shrink-0 text-primary" />
+          <span class="min-w-0 flex-1">
+            <span class="block font-semibold">
+              {{ busy ? "Salvando..." : "Salvar na nuvem" }}
+            </span>
+            <span class="block truncate text-sm text-muted-foreground">
+              {{ session ? `Conta ${session.id}` : "Entrar ou criar uma conta com id e senha" }}
+            </span>
+          </span>
+        </button>
+      </div>
+      <CloudForm
+        v-else-if="view === 'cloud'"
+        submit-label="Salvar na nuvem"
+        :busy="busy"
+        is-new
+        @submit="createInCloud"
       />
       <div v-else-if="view === 'cards'" class="space-y-2">
         <button

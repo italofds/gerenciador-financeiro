@@ -1,15 +1,24 @@
 # Instruções para agentes
 
-Aplicativo de finanças pessoais em Vue 3, apenas frontend. Veja o [README](README.md) para
-funcionalidades, scripts e estrutura de pastas.
+Aplicativo de finanças pessoais em Vue 3, com uma API opcional (`api/`) para guardar o perfil na
+nuvem. Veja o [README](README.md) para funcionalidades, scripts e estrutura de pastas.
 
 ## Restrições do projeto
 
-- **Sem backend.** Não adicione servidor, API, autenticação nem banco de dados. Os dados do
-  usuário existem só na memória e no arquivo `.json` que ele abre e salva.
-- **Compatibilidade do arquivo salvo.** O `.json` é o tipo `Profile` de `src/lib/finance.ts`
-  serializado. Arquivos já salvos pelos usuários precisam continuar abrindo: ao mudar esses
-  tipos, trate a ausência dos campos novos na leitura (em `Welcome.vue`).
+- **O frontend funciona sem a API.** O perfil existe na memória e no arquivo `.json` que o
+  usuário abre e salva. As opções de nuvem só aparecem quando `VITE_API_URL` está definida
+  (`cloudEnabled()` em `src/lib/cloud.ts`); nenhuma funcionalidade pode depender dela.
+- **O servidor nunca lê os dados do usuário.** O perfil é cifrado no navegador em
+  `src/lib/cloud.ts` e a senha não sai do dispositivo: a API recebe só a chave de autenticação
+  derivada e um blob opaco. Não envie à API senha, perfil em claro nem campos dele, e não adicione
+  rotas que precisem interpretar o conteúdo do perfil.
+- **A API é só armazenamento.** `api/` é um projeto Node separado (Express e MongoDB), com
+  `package.json` próprio. As regras de negócio continuam no frontend.
+- **Compatibilidade dos dados salvos.** O `.json` e o conteúdo cifrado na nuvem são o tipo
+  `Profile` de `src/lib/finance.ts` serializado. Perfis já salvos pelos usuários precisam
+  continuar abrindo: ao mudar esses tipos, trate a ausência dos campos novos em `parseProfile`.
+  Mudar a derivação de chaves ou o formato do blob em `src/lib/cloud.ts` torna ilegíveis os
+  perfis já salvos na nuvem; crie uma nova versão (`v`) e continue lendo a anterior.
 - **Página única.** Não há roteador; `App.vue` alterna entre `Welcome` e `Ledger`. Só adicione
   `vue-router` se surgir de fato uma segunda rota.
 - **Interface em português do Brasil**, pensada para celular (coluna de largura `max-w-md`).
@@ -36,6 +45,17 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+Se a alteração tocar em `api/`, rode também dentro dessa pasta:
+
+```sh
+npm run typecheck
+npm test
+npm run build
+```
+
+O contrato das rotas é implementado em `api/src/app.ts` e consumido em `src/lib/cloud.ts`; ao
+mudar um lado, mude o outro e a API simulada de `src/test/cloud.test.ts`.
 
 O `tsconfig.json` é estrito (`exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`); corrija
 os erros de tipo em vez de afrouxar a configuração.

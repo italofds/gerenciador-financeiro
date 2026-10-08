@@ -49,6 +49,18 @@ export const ymLabel = (ym: string) => {
 
 export const newProfile = (name: string): Profile => ({ name, cards: [], records: [], done: {} });
 
+// Reads a saved profile (file or cloud), filling in fields that older versions didn't have.
+export function parseProfile(data: unknown): Profile {
+  const d = data as Partial<Profile> | null;
+  if (!d || !Array.isArray(d.records) || !Array.isArray(d.cards)) throw new Error("invalid profile");
+  return {
+    name: String(d.name ?? "Perfil"),
+    cards: d.cards,
+    records: d.records.map((r) => ({ ...r, overrides: r.overrides ?? {} })),
+    done: d.done ?? {},
+  };
+}
+
 export function occurs(r: FinRecord, ym: string) {
   const idx = diffYm(ym, r.date.slice(0, 7));
   if (idx < 0) return -1;
