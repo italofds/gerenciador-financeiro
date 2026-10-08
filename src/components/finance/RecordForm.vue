@@ -43,12 +43,18 @@ const valid = computed(
     (rec.value !== "limited" || +months.value >= 1),
 );
 
+const parseCents = (s: string) => {
+  const d = s.replace(/\D/g, "").slice(0, 11);
+  return d ? parseInt(d, 10) : 0;
+};
+// listening to the model update keeps Input controlled, so it never holds the raw typed text
+const onAmountUpdate = (v: string | undefined) => {
+  cents.value = parseCents(v ?? "");
+};
 const onAmountInput = (e: Event) => {
   const t = e.target as HTMLInputElement;
-  const d = t.value.replace(/\D/g, "").slice(0, 11);
-  cents.value = d ? parseInt(d, 10) : 0;
   // keep the field masked even when the typed character doesn't change the amount
-  t.value = format(cents.value);
+  t.value = format(parseCents(t.value));
 };
 const onAmountFocus = (e: FocusEvent) => {
   const t = e.target as HTMLInputElement;
@@ -113,6 +119,7 @@ const deleteLabel = computed(() =>
         inputmode="numeric"
         :model-value="value"
         :class="`num h-14 text-right text-2xl ${kind === 'in' ? 'text-income' : 'text-expense'}`"
+        @update:model-value="onAmountUpdate"
         @input="onAmountInput"
         @focus="onAmountFocus"
       />
