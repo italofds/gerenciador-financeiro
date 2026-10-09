@@ -1,6 +1,6 @@
-# Caixa — API de nuvem
+# Gerenciador Financeiro — API de nuvem
 
-API em Express que guarda no MongoDB o perfil de cada usuário do [Caixa](../README.md).
+API em Express que guarda no MongoDB o perfil de cada usuário do [Gerenciador Financeiro](../README.md).
 
 Ela é só armazenamento: o perfil chega cifrado pelo navegador e a API não tem como lê-lo. A senha
 do usuário nunca é enviada; a API recebe uma chave de autenticação derivada dela e guarda apenas
@@ -23,12 +23,12 @@ o hash dessa chave.
 
 ## Variáveis de ambiente
 
-| Variável      | Obrigatória | Padrão                  | Descrição                                         |
-| ------------- | ----------- | ----------------------- | ------------------------------------------------- |
-| `MONGODB_URI` | sim         |                         | String de conexão do MongoDB                      |
-| `MONGODB_DB`  | não         | `caixa`                 | Nome do banco                                     |
-| `CORS_ORIGIN` | não         | `http://localhost:5173` | Origens do frontend permitidas, separadas por `,` |
-| `PORT`        | não         | `8080`                  | Porta do servidor                                 |
+| Variável      | Obrigatória | Padrão                   | Descrição                                         |
+| ------------- | ----------- | ------------------------ | ------------------------------------------------- |
+| `MONGODB_URI` | sim         |                          | String de conexão do MongoDB                      |
+| `MONGODB_DB`  | não         | `gerenciador-financeiro` | Nome do banco                                     |
+| `CORS_ORIGIN` | não         | `http://localhost:5173`  | Origens do frontend permitidas, separadas por `,` |
+| `PORT`        | não         | `8080`                   | Porta do servidor                                 |
 
 ## Como rodar
 
@@ -71,16 +71,16 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com secretmanage
 
 # guarda a string de conexão como segredo
 printf '%s' 'mongodb+srv://usuario:senha@cluster.exemplo.mongodb.net/' |
-  gcloud secrets create caixa-mongodb-uri --data-file=-
+  gcloud secrets create gerenciador-financeiro-mongodb-uri --data-file=-
 
 # a partir da raiz do repositório
-gcloud run deploy caixa-api \
+gcloud run deploy gerenciador-financeiro-api \
   --source api \
   --region us-central1 \
   --allow-unauthenticated \
   --max-instances 1 \
   --memory 256Mi \
-  --set-secrets MONGODB_URI=caixa-mongodb-uri:latest \
+  --set-secrets MONGODB_URI=gerenciador-financeiro-mongodb-uri:latest \
   --set-env-vars CORS_ORIGIN=https://italofds.github.io
 ```
 
@@ -96,11 +96,11 @@ Se o deploy falhar por falta de acesso ao segredo, dê à conta de serviço do C
 
 ### 3. Apontar o frontend para a API
 
-O deploy imprime o endereço do serviço (`https://caixa-api-....run.app`). Na raiz do repositório,
+O deploy imprime o endereço do serviço (`https://gerenciador-financeiro-api-....run.app`). Na raiz do repositório,
 crie `.env.production` com ele e publique o site:
 
 ```sh
-VITE_API_URL=https://caixa-api-....run.app
+VITE_API_URL=https://gerenciador-financeiro-api-....run.app
 ```
 
 ```sh

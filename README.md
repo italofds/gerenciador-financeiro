@@ -1,4 +1,4 @@
-# Caixa — Gerenciador financeiro pessoal
+# Gerenciador Financeiro
 
 Aplicativo web para controlar entradas, saídas e cartões de crédito mês a mês.
 
@@ -20,6 +20,9 @@ perfil também pode ser guardado na nuvem, protegido por id e senha, por meio da
 - Saldo do mês anterior transportado automaticamente para o mês seguinte.
 - Marcar registros como efetivados e comparar o saldo previsto com o já efetivado.
 - Navegar entre meses pelas setas ou arrastando a tela para os lados.
+- Instalar o app na tela inicial do celular (PWA) e abri-lo sem conexão. No Android, use
+  **Instalar app** no menu do Chrome; no iPhone, **Compartilhar → Adicionar à Tela de Início** no
+  Safari. A instalação exige que o app esteja publicado em HTTPS.
 
 As alterações ficam só na memória até você tocar em **Salvar** e escolher entre baixar o arquivo
 `.json` atualizado ou salvar na nuvem. Um ponto vermelho no botão indica alterações ainda não
@@ -67,6 +70,8 @@ O conteúdo de `dist/` é estático e pode ser publicado em qualquer hospedagem 
 
 ```
 index.html                  Página única e metadados
+vite.config.ts              Build, manifesto do app instalável e service worker
+public/                     Favicon e ícones do app instalado
 src/
   main.ts                   Ponto de entrada
   App.vue                   Alterna entre a tela inicial e o livro-caixa
@@ -85,6 +90,6 @@ api/                        API de nuvem (Express e MongoDB), projeto Node separ
 ## Tecnologias
 
 - Vue 3 com `<script setup>` e TypeScript
-- Vite
+- Vite e `vite-plugin-pwa`
 - Tailwind CSS 4
 - Vitest e Vue Test Utils

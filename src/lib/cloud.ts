@@ -52,7 +52,7 @@ const utf8 = (s: string) => new TextEncoder().encode(s);
 
 async function deriveKeys(id: string, password: string) {
   const subtle = crypto.subtle;
-  const salt = utf8(`caixa:v1:${id}`);
+  const salt = utf8(`gerenciador-financeiro:v1:${id}`);
   const pass = await subtle.importKey("raw", utf8(password), "PBKDF2", false, ["deriveBits"]);
   const master = await subtle.deriveBits(
     { name: "PBKDF2", hash: "SHA-256", salt, iterations: 600_000 },

@@ -1,5 +1,5 @@
 {
-  "name": "caixa-api",
+  "name": "gerenciador-financeiro-api",
   "private": true,
   "type": "module",
   "engines": {
