@@ -23,6 +23,28 @@ export const MIN_PASSWORD = 8;
 export const normalizeId = (id: string) => id.trim().toLowerCase();
 export const isValidId = (id: string) => /^[a-z0-9_.-]{3,32}$/.test(id);
 
+// Only the id (never the password) is kept, so the user doesn't have to retype it each time.
+const RECENT_IDS_KEY = "cloud:recentIds";
+const RECENT_IDS_MAX = 5;
+
+export function recentCloudIds(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_IDS_KEY) ?? "[]");
+    return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberCloudId(id: string) {
+  try {
+    const ids = [id, ...recentCloudIds().filter((other) => other !== id)].slice(0, RECENT_IDS_MAX);
+    localStorage.setItem(RECENT_IDS_KEY, JSON.stringify(ids));
+  } catch {
+    // private browsing / storage disabled: not worth surfacing to the user
+  }
+}
+
 const apiUrl = () => (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 export const cloudEnabled = () => apiUrl() !== "";
 
@@ -132,6 +154,7 @@ export async function openCloud(
     `/v1/profiles/${encodeURIComponent(wireId(id))}/open`,
     { authKey: keys.authKey },
   );
+  rememberCloudId(id);
   return { profile: await decrypt(keys.encKey, blob), session: { id, ...keys, rev } };
 }
 
@@ -148,6 +171,7 @@ export async function createCloud(
     authKey: keys.authKey,
     blob,
   });
+  rememberCloudId(id);
   return { id, ...keys, rev };
 }
 
