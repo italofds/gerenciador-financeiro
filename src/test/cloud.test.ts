@@ -22,7 +22,7 @@ const profile: Profile = {
 
 type Doc = { authKey: string; blob: unknown; rev: number };
 
-// stands in for the API, following the contract of api/src/app.ts
+// stands in for the API, following the contract of the cloud-blob-api repo (src/app.ts)
 function fakeApi() {
   const docs = new Map<string, Doc>();
   const sent: string[] = [];
@@ -114,8 +114,8 @@ describe("cloud", () => {
 
   it("reports data that can't be decrypted", async () => {
     await createCloud("maria", "senha-secreta", profile);
-    const doc = api.docs.get("maria")!;
-    api.docs.set("maria", { ...doc, blob: { v: 1, iv: "A".repeat(16), data: "AAAA" } });
+    const doc = api.docs.get("fin-maria")!;
+    api.docs.set("fin-maria", { ...doc, blob: { v: 1, iv: "A".repeat(16), data: "AAAA" } });
 
     expect(await code(openCloud("maria", "senha-secreta"))).toBe("invalid");
   });

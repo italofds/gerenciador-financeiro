@@ -1,5 +1,5 @@
 interface ImportMetaEnv {
-  /** Endereço da API de nuvem (pasta `api/`). Sem ela, o app só trabalha com arquivos. */
+  /** Endereço da API de nuvem (repositório `cloud-blob-api`). Sem ela, o app só trabalha com arquivos. */
   readonly VITE_API_URL?: string;
 }
 

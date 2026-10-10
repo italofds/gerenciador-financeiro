@@ -26,6 +26,11 @@ export const isValidId = (id: string) => /^[a-z0-9_.-]{3,32}$/.test(id);
 const apiUrl = () => (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 export const cloudEnabled = () => apiUrl() !== "";
 
+// A API de nuvem é compartilhada com outros apps; esse prefixo evita que dois apps colidam no
+// mesmo documento se o usuário usar o mesmo id nos dois. `CloudSession.id` nunca leva o prefixo.
+const WIRE_PREFIX = "fin-";
+const wireId = (id: string) => `${WIRE_PREFIX}${id}`;
+
 const messages: Record<CloudErrorCode, string> = {
   auth: "Id ou senha incorretos.",
   taken: "Este id já está em uso. Escolha outro.",
@@ -124,7 +129,7 @@ export async function openCloud(
   const keys = await deriveKeys(id, password);
   const { blob, rev } = await request<{ blob: CipherBlob; rev: number }>(
     "POST",
-    `/v1/profiles/${encodeURIComponent(id)}/open`,
+    `/v1/profiles/${encodeURIComponent(wireId(id))}/open`,
     { authKey: keys.authKey },
   );
   return { profile: await decrypt(keys.encKey, blob), session: { id, ...keys, rev } };
@@ -139,7 +144,7 @@ export async function createCloud(
   const keys = await deriveKeys(id, password);
   const blob = await encrypt(keys.encKey, profile);
   const { rev } = await request<{ rev: number }>("POST", "/v1/profiles", {
-    id,
+    id: wireId(id),
     authKey: keys.authKey,
     blob,
   });
@@ -152,7 +157,7 @@ export async function saveCloud(session: CloudSession, profile: Profile): Promis
   const blob = await encrypt(session.encKey, profile);
   const { rev } = await request<{ rev: number }>(
     "PUT",
-    `/v1/profiles/${encodeURIComponent(session.id)}`,
+    `/v1/profiles/${encodeURIComponent(wireId(session.id))}`,
     { authKey: session.authKey, blob, rev: session.rev },
   );
   return { ...session, rev };

@@ -3,8 +3,8 @@
 Aplicativo web para controlar entradas, saídas e cartões de crédito mês a mês.
 
 Cada perfil é um arquivo `.json` que você abre e salva no próprio dispositivo. Opcionalmente, o
-perfil também pode ser guardado na nuvem, protegido por id e senha, por meio da API da pasta
-[api/](api/README.md).
+perfil também pode ser guardado na nuvem, protegido por id e senha, por meio de uma API de
+armazenamento genérico que fica num repositório separado (compartilhada com outros apps).
 
 ## Funcionalidades
 
@@ -43,7 +43,7 @@ As opções de nuvem só aparecem quando a variável `VITE_API_URL` aponta para 
 trabalha apenas com arquivos.
 
 - Em desenvolvimento, `.env.development` já aponta para `http://localhost:8080`. Suba a API
-  seguindo o [README dela](api/README.md).
+  (repositório separado, `cloud-blob-api`) seguindo o README dela.
 - Em produção, crie `.env.production` com o endereço da API publicada antes de `npm run build`
   ou `npm run deploy`:
 
@@ -84,8 +84,10 @@ src/
     cloud.ts                Cifragem do perfil e chamadas à API de nuvem
     utils.ts                Utilitário de classes CSS
   test/                     Testes e configuração do ambiente de teste
-api/                        API de nuvem (Express e MongoDB), projeto Node separado
 ```
+
+A API de nuvem (Express e MongoDB) vive num repositório separado (`cloud-blob-api`), compartilhado
+com outros apps que também guardam um perfil cifrado na nuvem.
 
 ## Tecnologias
 
