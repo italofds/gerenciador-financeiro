@@ -21,8 +21,14 @@ Veja o [README](README.md) para funcionalidades, scripts e estrutura de pastas.
   continuar abrindo: ao mudar esses tipos, trate a ausência dos campos novos em `parseProfile`.
   Mudar a derivação de chaves ou o formato do blob em `src/lib/cloud.ts` torna ilegíveis os
   perfis já salvos na nuvem; crie uma nova versão (`v`) e continue lendo a anterior.
-- **Página única.** Não há roteador; `App.vue` alterna entre `Welcome` e `Ledger`. Só adicione
-  `vue-router` se surgir de fato uma segunda rota.
+- **Rotas e botão voltar.** `src/router.ts` define a tela inicial (`/`), o livro-caixa
+  (`/perfil`) e uma rota para cada folha (`BottomSheet`) aberta sobre ele, para que o botão
+  voltar do navegador feche a folha antes de sair do perfil. As rotas do livro-caixa reaproveitam
+  o mesmo `Ledger`, que deriva a folha aberta da rota. Abra uma tela com `router.push` a partir da
+  tela logo abaixo dela e feche com `leaveTo`, que volta pelo histórico (`meta.depth` diz a
+  profundidade de cada rota). O perfil só existe na memória: sem perfil aberto, `App.vue` manda as
+  rotas do livro-caixa de volta para `/`, e é ele que pede confirmação ao sair com alterações não
+  salvas. O histórico usa hash porque o app é publicado como arquivos estáticos.
 - **Interface em português do Brasil**, pensada para celular (coluna de largura `max-w-md`).
 
 ## Convenções de código

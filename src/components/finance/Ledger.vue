@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
   ChevronLeft,
   ChevronRight,
@@ -42,31 +43,43 @@ import {
   type Row,
   type Scope,
 } from "@/lib/finance";
-
-type SheetName = "record" | "card" | "cards" | "save" | "cloud";
+import { leaveTo, type SheetName } from "@/router";
 
 const props = defineProps<{ profile: Profile; session: CloudSession | null; dirty: boolean }>();
 const emit = defineEmits<{
   update: [profile: Profile];
   saved: [session?: CloudSession];
-  close: [];
 }>();
 
+const route = useRoute();
+const router = useRouter();
 const cloudOn = cloudEnabled();
 const busy = ref(false);
 const today = new Date();
 const ym = ref(ymOf(today));
 const anim = ref("");
-const sheet = ref<SheetName | null>(null);
+// each sheet is a route, so the browser back button closes it
+const sheet = computed(() => route.meta.sheet ?? null);
 // last opened sheet, so its content stays rendered while the sheet animates out
 const view = ref<SheetName>("record");
 const editing = ref<{ recordId: string; ym: string } | null>(null);
 const editCard = ref<Card | null>(null);
 let touch: { x: number; y: number } | null = null;
 
-watch(sheet, (s) => {
-  if (s) view.value = s;
-});
+watch(
+  () => route.fullPath,
+  () => {
+    const s = sheet.value;
+    if (!s) return;
+    view.value = s;
+    const id = typeof route.params["id"] === "string" ? route.params["id"] : "";
+    if (s === "record") {
+      const mes = route.query["mes"];
+      editing.value = id ? { recordId: id, ym: typeof mes === "string" ? mes : ym.value } : null;
+    } else if (s === "card") editCard.value = props.profile.cards.find((c) => c.id === id) ?? null;
+  },
+  { immediate: true },
+);
 
 const groups = computed(() => computeMonth(props.profile, ym.value));
 const label = computed(() => ymLabel(ym.value));
@@ -120,17 +133,17 @@ const download = () => {
   a.click();
   URL.revokeObjectURL(a.href);
   emit("saved");
-  sheet.value = null;
+  leaveTo(router, "ledger");
   toast.success("Arquivo salvo");
 };
 const save = () => {
-  if (cloudOn) sheet.value = "save";
+  if (cloudOn) void router.push({ name: "save" });
   else download();
 };
 
 const cloudSaved = (s: CloudSession) => {
   emit("saved", s);
-  sheet.value = null;
+  leaveTo(router, "ledger");
   toast.success("Salvo na nuvem");
 };
 const cloudTask = async (task: () => Promise<void>) => {
@@ -147,7 +160,7 @@ const cloudTask = async (task: () => Promise<void>) => {
 const saveToCloud = () => {
   const s = props.session;
   if (!s) {
-    sheet.value = "cloud";
+    void router.push({ name: "cloud" });
     return;
   }
   void cloudTask(async () => {
@@ -175,43 +188,36 @@ const createInCloud = (id: string, password: string) =>
     }
   });
 
-const close = () => {
-  if (!props.dirty || confirm("Há alterações não salvas. Fechar mesmo assim?")) emit("close");
-};
+// App.vue asks for confirmation when there are unsaved changes
+const close = () => leaveTo(router, "welcome");
 
 const toggle = (key: string) =>
   update({ ...props.profile, done: { ...props.profile.done, [key]: !props.profile.done[key] } });
 
 const closeSheet = () => {
-  if (sheet.value === "card") sheet.value = "cards";
-  else if (sheet.value === "cloud") sheet.value = "save";
-  else sheet.value = null;
+  if (sheet.value === "card") leaveTo(router, "cards");
+  else if (sheet.value === "cloud") leaveTo(router, "save");
+  else leaveTo(router, "ledger");
 };
-const newRecord = () => {
-  editing.value = null;
-  sheet.value = "record";
-};
+const newRecord = () => void router.push({ name: "record" });
 const openRow = (r: Row) => {
-  if (!r.recordId) return;
-  editing.value = { recordId: r.recordId, ym: ym.value };
-  sheet.value = "record";
+  if (r.recordId)
+    void router.push({ name: "record", params: { id: r.recordId }, query: { mes: ym.value } });
 };
-const openCard = (c: Card | null) => {
-  editCard.value = c;
-  sheet.value = "card";
-};
+const openCard = (c: Card | null) =>
+  void router.push({ name: "card", params: c ? { id: c.id } : {} });
 
 const saveRecord = (input: RecordInput, scope: Scope) => {
   const p = props.profile;
   if (editRec.value && editing.value)
     update(updateRecord(p, editRec.value.id, editing.value.ym, scope, input));
   else update({ ...p, records: [...p.records, { ...input, id: uid(), overrides: {} }] });
-  sheet.value = null;
+  leaveTo(router, "ledger");
 };
 const removeRecord = (scope: Scope) => {
   if (editRec.value && editing.value)
     update(deleteRecord(props.profile, editRec.value.id, editing.value.ym, scope));
-  sheet.value = null;
+  leaveTo(router, "ledger");
 };
 
 const saveCard = (c: Omit<Card, "id">) => {
@@ -223,7 +229,7 @@ const saveCard = (c: Omit<Card, "id">) => {
       ? p.cards.map((x) => (x.id === id ? { ...x, ...c } : x))
       : [...p.cards, { ...c, id: uid() }],
   });
-  sheet.value = "cards";
+  leaveTo(router, "cards");
 };
 const removeCard = () => {
   const id = editCard.value?.id;
@@ -234,7 +240,7 @@ const removeCard = () => {
     cards: p.cards.filter((x) => x.id !== id),
     records: p.records.map((r) => (r.source === id ? { ...r, source: "account" } : r)),
   });
-  sheet.value = "cards";
+  leaveTo(router, "cards");
 };
 
 const onPointerDown = (e: PointerEvent) => {
@@ -265,7 +271,12 @@ const onPointerUp = (e: PointerEvent) => {
           <X class="h-4 w-4 shrink-0" /><span class="truncate">{{ profile.name }}</span>
         </button>
         <div class="flex shrink-0 gap-2">
-          <Button size="sm" variant="secondary" class="rounded-full" @click="sheet = 'cards'">
+          <Button
+            size="sm"
+            variant="secondary"
+            class="rounded-full"
+            @click="router.push({ name: 'cards' })"
+          >
             <CreditCard class="h-4 w-4" /> Cartões
           </Button>
           <Button

@@ -74,7 +74,8 @@ vite.config.ts              Build, manifesto do app instalável e service worker
 public/                     Favicon e ícones do app instalado
 src/
   main.ts                   Ponto de entrada
-  App.vue                   Alterna entre a tela inicial e o livro-caixa
+  router.ts                 Rotas: tela inicial, livro-caixa e cada folha aberta sobre ele
+  App.vue                   Dono do perfil aberto; protege as rotas do livro-caixa
   styles.css                Tailwind e tokens de cor, raio e fonte
   components/
     finance/                Telas e formulários do app
@@ -92,6 +93,7 @@ com outros apps que também guardam um perfil cifrado na nuvem.
 ## Tecnologias
 
 - Vue 3 com `<script setup>` e TypeScript
+- Vue Router (histórico com hash, para o botão voltar do navegador)
 - Vite e `vite-plugin-pwa`
 - Tailwind CSS 4
 - Vitest e Vue Test Utils
